@@ -33,6 +33,9 @@
 #define TCPBUFSIZE  8192
 #define SRVBUFSIZE (param->srv->bufsize?param->srv->bufsize:((param->service == S_UDPPM)?UDPBUFSIZE:TCPBUFSIZE))
 
+#ifndef BUILDLIB
+#define USECONFIGFILE
+#endif
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -137,11 +140,6 @@ void daemonize(void);
 #define MAXRADIUS 5
 
 #define DEFLOGFORMAT "G%y%m%d%H%M%S.%. %p %E %U %C:%c %R:%r %O %I %h %T"
-
-#define myalloc malloc
-#define myfree free
-#define myrealloc realloc
-#define mystrdup strdup
 
 extern RESOLVFUNC resolvfunc;
 

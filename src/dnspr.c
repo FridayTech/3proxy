@@ -19,7 +19,7 @@
 void * dnsprchild(struct clientparam* param) {
  unsigned long ip = 0;
  unsigned char *bbuf;
- unsigned char *buf, *s1, *s2;
+ unsigned char *buf=NULL, *s1, *s2;
  char * host = NULL;
  unsigned char c;
  SASIZETYPE size;

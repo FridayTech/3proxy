@@ -1701,8 +1701,8 @@ struct parse *p;
 register struct re_guts *g;
 {
 	register sop *scan;
-	sop *start;
-	register sop *newstart;
+	sop *start=NULL;
+	register sop *newstart=NULL;
 	register sopno newlen;
 	register sop s;
 	register char *cp;

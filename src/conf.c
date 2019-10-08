@@ -20,6 +20,13 @@
 #define DEFAULTCONFIG conf.stringtable[25]
 #endif
 
+extern unsigned char *logDirOutput;
+extern unsigned char *logFormatOutput;
+extern unsigned char *internalIp;
+extern unsigned char *bandlimitbit;
+extern unsigned char *proxyCmd;
+extern int bandwidthLimitation;
+
 pthread_mutex_t bandlim_mutex;
 pthread_mutex_t connlim_mutex;
 pthread_mutex_t tc_mutex;
@@ -1654,7 +1661,7 @@ int readconfig(FILE * fp){
  unsigned char * buf = NULL;
   int bufsize = STRINGBUF*2;
   int inbuf = 0;
-  int argc;
+  int argc=0;
   struct commands * cm;
   int res = 0;
 
@@ -1662,7 +1669,27 @@ int readconfig(FILE * fp){
 		fprintf(stderr, "No memory for configuration");
 		return(10);
   }
+#ifdef USECONFIGFILE
   for (linenum = 1; fgets((char *)buf, STRINGBUF, fp); linenum++){
+#else
+  // Set up config
+  int cfgc = 5;
+  unsigned char ** cfgv = NULL;
+  cfgv = myalloc(bufsize*cfgc);
+  for (int i = 0; i < cfgc; i++)
+  {
+  	cfgv[i] = myalloc(bufsize);
+  	sprintf(cfgv[i], "#\n");
+  }
+  strcpy(cfgv[0], logDirOutput);
+  strcpy(cfgv[1], logFormatOutput);
+  strcpy(cfgv[2], internalIp);
+  if (bandwidthLimitation == 1) strcpy(cfgv[3], bandlimitbit);
+  strcpy(cfgv[4], proxyCmd);
+
+  for (linenum = 1; linenum <= cfgc; linenum++){
+	  strcpy(buf, cfgv[linenum-1]);
+#endif
 	if(!*buf || isspace(*buf) || (*buf) == '#')continue;
 
 	inbuf = (int)(strlen((char *)buf) + 1);
@@ -1703,6 +1730,12 @@ int readconfig(FILE * fp){
   }
   myfree(buf);
   myfree(argv);
+#ifdef BUILDLIB
+  for (int i = 0; i < cfgc; i++)
+  {
+	  myfree(cfgv[i]);
+  }
+#endif
   return 0;
 
 }
@@ -1732,7 +1765,7 @@ void freeconf(struct extparam *confp){
 
  int i;
 
-
+ confp->timetoexit = 0;
 
 
  pthread_mutex_lock(&tc_mutex);
@@ -1840,13 +1873,14 @@ void freeconf(struct extparam *confp){
 }
 
 int reload (void){
-	FILE *fp;
+	FILE *fp = NULL;
 	int error = -2;
 
 	conf.paused++;
 	freeconf(&conf);
 	conf.paused++;
 
+#ifdef USECONFIGFILE
 	fp = confopen();
 	if(fp){
 		error = readconfig(fp);
@@ -1854,7 +1888,10 @@ int reload (void){
 		if(error) {
 			 freeconf(&conf);
 		}
-		if(!writable)fclose(fp);
+		if(!writable && fp)fclose(fp);
 	}
+#else
+	error = readconfig(fp);
+#endif
 	return error;
 }

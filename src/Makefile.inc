@@ -143,5 +143,15 @@ stringtable$(OBJSUFFICS):  stringtable.c
 $(BUILDDIR)3proxy$(EXESUFFICS): 3proxy$(OBJSUFFICS) mainfunc$(OBJSUFFICS) srvproxy$(OBJSUFFICS) srvpop3p$(OBJSUFFICS) srvsmtpp$(OBJSUFFICS) srvftppr$(OBJSUFFICS) srvsocks$(OBJSUFFICS) srvtcppm$(OBJSUFFICS) srvudppm$(OBJSUFFICS) sockmap$(OBJSUFFICS) sockgetchar$(OBJSUFFICS) common$(OBJSUFFICS) auth$(OBJSUFFICS) authradius$(OBJSUFFICS) conf$(OBJSUFFICS) datatypes$(OBJSUFFICS) md4$(OBJSUFFICS) md5$(OBJSUFFICS) mycrypt$(OBJSUFFICS) base64$(OBJSUFFICS) ftp$(OBJSUFFICS) smbdes$(OBJSUFFICS) ntlm$(OBJSUFFICS) stringtable$(OBJSUFFICS) srvwebadmin$(OBJSUFFICS) srvdnspr$(OBJSUFFICS) plugins$(OBJSUFFICS) $(COMPATLIBS)
 	$(LN) $(LNOUT)$(BUILDDIR)3proxy$(EXESUFFICS) $(LDFLAGS) $(VERFILE)  3proxy$(OBJSUFFICS) mainfunc$(OBJSUFFICS) auth$(OBJSUFFICS) authradius$(OBJSUFFICS) conf$(OBJSUFFICS) datatypes$(OBJSUFFICS) srvproxy$(OBJSUFFICS) srvpop3p$(OBJSUFFICS) srvsmtpp$(OBJSUFFICS) srvftppr$(OBJSUFFICS) srvsocks$(OBJSUFFICS) srvtcppm$(OBJSUFFICS) srvudppm$(OBJSUFFICS) sockmap$(OBJSUFFICS) sockgetchar$(OBJSUFFICS) common$(OBJSUFFICS) mycrypt$(OBJSUFFICS) md5$(OBJSUFFICS) md4$(OBJSUFFICS) base64$(OBJSUFFICS) ftp$(OBJSUFFICS) smbdes$(OBJSUFFICS) ntlm$(OBJSUFFICS) stringtable$(OBJSUFFICS) srvwebadmin$(OBJSUFFICS) srvdnspr$(OBJSUFFICS) plugins$(OBJSUFFICS) $(COMPATLIBS) $(LIBS)
 
+buildlib: $(BUILDLIB)3proxy$(LIBSSUFFIX) clean
+
+3proxylib$(OBJSUFFICS): 3proxy.c 3proxy.h proxy.h structures.h
+	$(CC) $(COUT)3proxylib$(OBJSUFFICS) $(CFLAGS) $(DEFINEOPTION)BUILDLIB 3proxy.c
+
+conflib$(OBJSUFFICS): conf.c proxy.h structures.h
+	$(CC) $(COUT)conflib$(OBJSUFFICS) $(CFLAGS) $(DEFINEOPTION)BUILDLIB conf.c
+
+$(BUILDLIB)3proxy$(LIBSSUFFIX): 3proxylib$(OBJSUFFICS) auth$(OBJSUFFICS) authradius$(OBJSUFFICS) base64$(OBJSUFFICS) common$(OBJSUFFICS) conflib$(OBJSUFFICS) datatypes$(OBJSUFFICS) srvdnspr$(OBJSUFFICS) ftp$(OBJSUFFICS) srvftppr$(OBJSUFFICS) md4$(OBJSUFFICS) md5$(OBJSUFFICS) mycrypt$(OBJSUFFICS) ntlm$(OBJSUFFICS) plugins$(OBJSUFFICS) srvpop3p$(OBJSUFFICS) srvproxy$(OBJSUFFICS) mainfunc$(OBJSUFFICS) smbdes$(OBJSUFFICS) srvsmtpp$(OBJSUFFICS) sockgetchar$(OBJSUFFICS) sockmap$(OBJSUFFICS) srvsocks$(OBJSUFFICS) stringtable$(OBJSUFFICS) srvtcppm$(OBJSUFFICS) srvudppm$(OBJSUFFICS) srvwebadmin$(OBJSUFFICS) $(COMPATLIBS)
+	$(LN) $(LDLIBFLAGS) $(LNOUT)$(BUILDLIB)3proxy$(LIBSSUFFIX) $(VERFILE)  3proxylib$(OBJSUFFICS) mainfunc$(OBJSUFFICS) auth$(OBJSUFFICS) authradius$(OBJSUFFICS) conflib$(OBJSUFFICS) datatypes$(OBJSUFFICS) srvproxy$(OBJSUFFICS) srvpop3p$(OBJSUFFICS) srvsmtpp$(OBJSUFFICS) srvftppr$(OBJSUFFICS) srvsocks$(OBJSUFFICS) srvtcppm$(OBJSUFFICS) srvudppm$(OBJSUFFICS) sockmap$(OBJSUFFICS) sockgetchar$(OBJSUFFICS) common$(OBJSUFFICS) mycrypt$(OBJSUFFICS) md5$(OBJSUFFICS) md4$(OBJSUFFICS) base64$(OBJSUFFICS) ftp$(OBJSUFFICS) smbdes$(OBJSUFFICS) ntlm$(OBJSUFFICS) stringtable$(OBJSUFFICS) srvwebadmin$(OBJSUFFICS) srvdnspr$(OBJSUFFICS) plugins$(OBJSUFFICS) $(COMPATLIBS)
 clean:
 	@$(REMOVECOMMAND) *$(OBJSUFFICS) $(COMPFILES)

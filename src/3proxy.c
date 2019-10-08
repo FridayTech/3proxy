@@ -6,6 +6,7 @@
 
 */
 
+#include "3proxy.h"
 #include "proxy.h"
 #ifndef _WIN32
 #include <sys/resource.h>
@@ -17,6 +18,9 @@
 #ifndef DEFAULTCONFIG
 #define DEFAULTCONFIG conf.stringtable[25]
 #endif
+#define STRINGBUF 65535
+#define NPARAMS	  4096
+#define RETURN(x) {res = x; goto CLEARRETURN;}
 
 FILE * confopen();
 extern unsigned char *strings[];
@@ -27,6 +31,13 @@ extern struct counter_record crecord;
 
 
 time_t basetime = 0;
+unsigned char *logDirOutput = NULL;
+unsigned char *logFormatOutput = NULL;
+unsigned char *internalIp = NULL;
+unsigned char *bandlimitbit = NULL;
+const unsigned char *proxyCmd = "proxy -n\n";
+int bandwidthLimitation = 0;
+int bufsize = STRINGBUF * 2;
 
 void doschedule(void);
 
@@ -335,11 +346,60 @@ void cyclestep(void){
  }
 }
 
+void setLimitBandwidth(int bandlimit)
+{
+	bandlimitbit = myalloc(bufsize);
+	sprintf(bandlimitbit, "bandlimout %d\n", bandlimit);
+	bandwidthLimitation = 1;
+}
 
-#define RETURN(x) {res = x; goto CLEARRETURN;}
+void removeBandwidthLimitation()
+{
+	bandwidthLimitation = 0;
+}
 
+void setLogFormat(const char* logFormat)
+{
+	logFormatOutput = myalloc(bufsize);
+	sprintf(logFormatOutput, "logformat \"%s\"\n", logFormat);
+}
 
+void reloadProxy()
+{
+	conf.needreload = 1;
+}
 
+void stopProxy()
+{
+	conf.timetoexit = 1;
+	conf.paused++;
+#ifdef _WIN32
+	Sleep(2000);
+	SetStatus(SERVICE_STOPPED, 0, 0);
+#endif
+#ifndef NOODBC
+	pthread_mutex_lock(&log_mutex);
+	close_sql();
+	pthread_mutex_unlock(&log_mutex);
+#endif
+	myfree(logDirOutput);
+	myfree(logFormatOutput);
+	myfree(internalIp);
+	myfree(bandlimitbit);
+	pthread_mutex_destroy(&config_mutex);
+	pthread_mutex_destroy(&bandlim_mutex);
+	pthread_mutex_destroy(&connlim_mutex);
+	pthread_mutex_destroy(&hash_mutex);
+	pthread_mutex_destroy(&tc_mutex);
+	pthread_mutex_destroy(&pwl_mutex);
+	pthread_mutex_destroy(&log_mutex);
+#ifndef NORADIUS
+	pthread_mutex_destroy(&rad_mutex);
+#endif
+
+}
+
+#ifndef BUILDLIB
 #ifndef _WINCE
 int main(int argc, char * argv[]) {
 #else
@@ -348,6 +408,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
  char ** argv;
  WNDCLASS wc;
  HWND hwnd = 0;
+#endif
+#else
+int startProxy(const char * logDir, const char * proxyIp) {
+	int argc = 0;
+	char ** argv = NULL;
+	logDirOutput = myalloc(bufsize);
+	sprintf(logDirOutput, "log %s\n", logDir);
+	internalIp = myalloc(bufsize);
+	sprintf(internalIp, "internal %s\n", proxyIp);
 #endif
 
   int res = 0;
@@ -360,7 +429,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 
   WSAStartup(MAKEWORD( 1, 1 ), &wd);
   osv.dwOSVersionInfoSize = sizeof(osv);
-  GetVersionEx(&osv);
+  //GetVersionEx(&osv); // GetVersionEx() is deprecated.
 #endif
 
 
@@ -491,6 +560,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 	if(!fp) fp = stdin;
 #endif
   }
+#ifdef USECONFIGFILE
   if(argc > 2 || !(fp)) {
 
 	fprintf(stderr, "Usage: %s [conffile]\n", argv[0]);
@@ -505,7 +575,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 
 	return 1;
   }
-
+#endif
   pthread_mutex_init(&config_mutex, NULL);
   pthread_mutex_init(&bandlim_mutex, NULL);
   pthread_mutex_init(&connlim_mutex, NULL);
@@ -522,10 +592,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
   conf.version++;
 
   if(res) RETURN(res);
-  if(!writable)fclose(fp);
+  if(!writable && fp)fclose(fp);
 
 #ifdef _WIN32
-  
+
+#ifndef BUILDLIB
 #ifndef _WINCE
   if(service){
 	SERVICE_TABLE_ENTRY ste[] = 
@@ -540,7 +611,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
   {
 	cyclestep();
   }
-  
+#else
+  HANDLE h;
+  pthread_t thread;
+#ifndef _WINCE
+  h = (HANDLE)_beginthreadex((LPSECURITY_ATTRIBUTES)NULL, 16384, (void *)cyclestep, NULL, (DWORD)0, &thread);
+#else
+  h = (HANDLE)CreateThread((LPSECURITY_ATTRIBUTES)NULL, 16384, (void *)cyclestep, NULL, (DWORD)0, &thread);
+#endif
+#endif
 
 #else
 	 signal(SIGCONT, mysigpause);
